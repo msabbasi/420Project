@@ -23,4 +23,4 @@ clean_input:
 	rm -rf data_input
 
 clean:
-	rm -rf *.o *~ data_output mpi_project 
+	rm -rf *.o *~ data_output mpi_project datatrim serial
