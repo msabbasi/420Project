@@ -26,22 +26,25 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include "csparse.h"
 
 const int MAX_STRING = 100;
 int N,max_index;
 int *l, *map;
 double *r1, *r2;
 int** D;
+cs *ADJ;
 
 void Usage(char* prog_name);
-int loadinput(int thread_count);
-int saveoutput();
+int loadinput(int **D, int *l, int *map, int N, int thread_count);
+int saveoutput(double *r1, double *r2, int *map, int N);
 
 int main(int argc, char* argv[]) {
-  int i,j,t;
+  int i,j,t,k;
   double sum;
   double d = 0.85;
   double c;
+  double* tmp;
   double start, end, min_start, max_end;
 
   int rank, processes;
@@ -73,10 +76,21 @@ int main(int argc, char* argv[]) {
 
   start = MPI_Wtime();
 
-  loadinput(processes);
+  loadinput(D,l,map,N,processes);
 
-  c = (1-d)/(double)N;
+  /*if (rank==0) {
+    int *Ai, *Ap, nz;
+    double *Ax;
+    Ai=ADJ->i;
+    Ap=ADJ->p;
+    Ax=ADJ->x;
+    nz=ADJ->nz;
+    for (i=0;i<nz;i++) {
+    printf("%d %d : %g\n",Ai[i],Ap[i],Ax?Ax[i]:1);
+    }
+    }*/
 
+  c = (1/(double)N)*(1-d);
   for (i= 0; i < N; i++) {
     r2[i] = (double) 1/N;
   }
@@ -100,18 +114,29 @@ int main(int argc, char* argv[]) {
   recvcounts[processes-1]=N-(N/processes)*(processes-1);
   displs[processes-1]=(processes-1)*N/processes;
 
+  //printf("I'm number %d and I like %d\n",rank,recvcounts[rank]);
+
+	
   for (t=0; t<10; t++) {
     MPI_Allgatherv(r2+block_size*rank, block_size, MPI_DOUBLE, r1, recvcounts, displs, MPI_DOUBLE, MPI_COMM_WORLD);
     for (i=0; i<block_size; i++) {
       sum = 0;
       for (j=0; j<N; j++) {
-	if (D[i+rank*block_size][j]) {
+	for (k=ADJ->p[j];k<ADJ->p[j+1];k++) {
+	  if (ADJ->i[k]==i+rank*block_size) {
+	    //sum+=r1[j]/(double)l[j];
+	    break;
+	  }
+	}
+	if (D[i+rank*block_size][j] == 1) {
 	  sum+= r1[j]/(double)l[j];
 	}
       }
       r2[i+rank*block_size] = c + d*sum;
     }
+		
   }
+	
 	
   end = MPI_Wtime();
 
@@ -127,6 +152,7 @@ int main(int argc, char* argv[]) {
   free(l);
   free(r1);
   free(r2);
+  cs_spfree(ADJ);
 
   MPI_Finalize();
   return 0;
@@ -139,7 +165,7 @@ void Usage(char* prog_name) {
 }  /* Usage */
 
 /*-------------------------------------------------------------------*/
-int loadinput(int thread_count)
+int loadinput(int **D, int *l, int *map, int N, int thread_count)
 {
   FILE* ip;
   int src, dst;
@@ -149,6 +175,10 @@ int loadinput(int thread_count)
       printf("error opening the input data.\n");
       return 1;
     }
+  int k, size = 0;
+  bool foundSrc, foundDst;
+
+  ADJ=cs_spalloc(0, 0, 1, 1, 1);
 
   int index = 0;
   int zero;
@@ -189,22 +219,26 @@ int loadinput(int thread_count)
 	  dst = map[dst];
 	}
       }
+		
+	        
       l[src]++;
       D[dst][src]=1;
+      cs_entry(ADJ,dst,src,1);
     }
-
   int i, j;
-  #pragma omp parallel for private(i,j)
+  //#pragma omp parallel for private(i,j)
   for (i=0; i<N; i++) {
     if (l[i] == 0) {
       l[i] = N-1;
       for (j=0; j < N; j++) {
 	if (j != i) {
 	  D[j][i] = 1;
+	  cs_entry(ADJ,j,i,1);
 	}
       }
     }
   }
+  ADJ=cs_triplet(ADJ);
   fclose(ip);     
   return 0;
 }

@@ -1,4 +1,4 @@
-PROCESSES=4
+PROCESSES=2
 MANY_NODES=10697
 NODES=1221
 SIZE=5500
@@ -11,12 +11,12 @@ project: data_input
 
 serial: data_input mpi_project_1.c
 	gcc $(CFLAGS) -o serial mpi_project_1.c
-	./serial $(MANY_NODES)
+	./serial $(NODES)
 
 datatrim:
 	gcc $(CFLAGS) -o datatrim datatrim.c
 
-data_input:
+data_input:datatrim
 	./datatrim $(SIZE)
 
 clean_input:

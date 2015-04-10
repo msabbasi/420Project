@@ -115,7 +115,7 @@ int loadinput(int **D, int *l, int *map, int N)
         FILE* ip;
         int src, dst;
 
-        if ((ip=fopen("data_input_big","r"))==NULL)
+        if ((ip=fopen("data_input","r"))==NULL)
         {
                 printf("error opening the input data.\n");
                 return 1;
