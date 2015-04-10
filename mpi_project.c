@@ -26,12 +26,14 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include "csparse.h"
 
 const int MAX_STRING = 100;
 int N;
 int *l, *map;
 double *r1, *r2;
 int** D;
+cs *ADJ;
 
 void Usage(char* prog_name);
 int loadinput(int **D, int *l, int *map, int N, int thread_count);
@@ -129,6 +131,7 @@ int main(int argc, char* argv[]) {
 	free(l);
 	free(r1);
 	free(r2);
+	cs_spfree(ADJ);
 
 	MPI_Finalize();
    return 0;
@@ -146,13 +149,16 @@ int loadinput(int **D, int *l, int *map, int N, int thread_count)
         FILE* ip;
         int src, dst;
 
-        if ((ip=fopen("data_input_big","r"))==NULL)
+        if ((ip=fopen("data_input","r"))==NULL)
         {
                 printf("error opening the input data.\n");
                 return 1;
         }
 	int k, size = 0;
 	bool foundSrc, foundDst;
+
+	ADJ=cs_spalloc(0, 0, 1, 1, 1);
+
 	while(!feof(ip))
 	{
         	fscanf(ip, "%d\t%d\n", &src, &dst);
@@ -180,6 +186,7 @@ int loadinput(int **D, int *l, int *map, int N, int thread_count)
 		}
 		l[src]++;
 		D[dst][src]=1;
+		cs_entry(ADJ,dst,src,1);
 	}
 	int i, j;
 	#pragma omp parallel for private(i,j)

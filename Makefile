@@ -6,8 +6,8 @@ CC=mpicc
 CFLAGS=-g -Wall
 
 project: data_input
-	$(CC) -o mpi_project mpi_project.c -lm -fopenmp
-	mpiexec -n $(PROCESSES) ./mpi_project $(MANY_NODES)
+	$(CC) -o mpi_project mpi_project.c csparse.c -lm -fopenmp
+	mpiexec -n $(PROCESSES) ./mpi_project $(NODES)
 
 serial: data_input mpi_project_1.c
 	gcc $(CFLAGS) -o serial mpi_project_1.c
