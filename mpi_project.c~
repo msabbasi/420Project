@@ -26,14 +26,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
-#include "csparse.h"
 
 const int MAX_STRING = 100;
 int N;
 int *l, *map;
 double *r1, *r2;
 int** D;
-cs *ADJ;
 
 void Usage(char* prog_name);
 int loadinput(int **D, int *l, int *map, int N, int thread_count);
@@ -45,7 +43,7 @@ int main(int argc, char* argv[]) {
 	double d = 0.85;
 	double c;
 	double* tmp;
-	double start, end, min_start, max_end;
+	double start, end;
 
 	int rank, processes;
 	MPI_Init( &argc, &argv );
@@ -76,18 +74,6 @@ int main(int argc, char* argv[]) {
 	start = MPI_Wtime();
 
 	loadinput(D,l,map,N,processes);
-
-	/*if (rank==0) {
-	  int *Ai, *Ap, nz;
-	  double *Ax;
-	  Ai=ADJ->i;
-	  Ap=ADJ->p;
-	  Ax=ADJ->x;
-	  nz=ADJ->nz;
-	  for (i=0;i<nz;i++) {
-	    printf("%d %d : %g\n",Ai[i],Ap[i],Ax?Ax[i]:1);
-	  }
-	  }*/
 
 	c = (1/(double)N)*(1-d);
 	for (i= 0; i < N; i++) {
@@ -133,11 +119,9 @@ int main(int argc, char* argv[]) {
 	
 	end = MPI_Wtime();
 
-	MPI_Reduce(&start,&min_start,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
-	MPI_Reduce(&end,&max_end,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
 	
 	if (rank == 0) {
-		printf("Time taken:%f\n", max_end-min_start);
+		printf("Time taken:%f\n", end-start);
 		saveoutput(r1,r2,map,N);
 	}
 
@@ -162,16 +146,13 @@ int loadinput(int **D, int *l, int *map, int N, int thread_count)
         FILE* ip;
         int src, dst;
 
-        if ((ip=fopen("data_input","r"))==NULL)
+        if ((ip=fopen("data_input_big","r"))==NULL)
         {
                 printf("error opening the input data.\n");
                 return 1;
         }
 	int k, size = 0;
 	bool foundSrc, foundDst;
-
-	ADJ=cs_spalloc(0, 0, 1, 1, 1);
-
 	while(!feof(ip))
 	{
         	fscanf(ip, "%d\t%d\n", &src, &dst);
@@ -181,16 +162,10 @@ int loadinput(int **D, int *l, int *map, int N, int thread_count)
 			if (map[k] == src) {
 				src = k;
 				foundSrc = 1;
-				if (foundDst) {
-				  break;
-				}
 			}
 			if (map[k] == dst) {
 				dst = k;
 				foundDst = 1;
-				if (foundSrc) {
-				  break;
-				}
 			}
 		}
 		if (!foundSrc) {

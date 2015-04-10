@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
 	MPI_Reduce(&end,&max_end,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
 	
 	if (rank == 0) {
-		printf("Time taken:%f\n", max_end-min_start);
+		printf("Time taken:%f\n", end-start);
 		saveoutput(r1,r2,map,N);
 	}
 

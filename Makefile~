@@ -1,12 +1,13 @@
-PROCESSES=4
+PROCESSES=2
+MANY_NODES=10697
 NODES=1221
 SIZE=5500
 CC=mpicc
 CFLAGS=-g -Wall
 
 project: data_input
-	$(CC) $(CFLAGS) -o mpi_project mpi_project_5.c csparse.c -lm -fopenmp
-	mpiexec -n $(PROCESSES) ./mpi_project $(NODES) $(SIZE)
+	$(CC) -o mpi_project mpi_project.c csparse.c -lm -fopenmp
+	mpiexec -n $(PROCESSES) ./mpi_project_4 $(NODES) $(SIZE)
 
 serial: data_input mpi_project_1.c
 	gcc $(CFLAGS) -o serial mpi_project_1.c
